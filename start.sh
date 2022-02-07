@@ -7,11 +7,6 @@ if test -f "$REQUIREMENTS_FILE"; then
     python3 -m pip install -r $REQUIREMENTS_FILE
 fi
 
-# Pull in latest config from user
-FILE=/config/mopidy.conf
-if test -f "$FILE"; then
-    echo "$FILE exists, using as command line argument"
-    mopidy --config $FILE
-else
-    mopidy
-fi
+python3 /start.py
+
+/usr/bin/supervisord
