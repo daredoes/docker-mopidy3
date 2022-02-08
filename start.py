@@ -73,7 +73,7 @@ def main():
     config = SUPERVISORD_CONF
     # Build Main Instance
     print('Writing main mopidy supervisord config')
-    config += build_program_config('Mopidy Instance', mopidy_config)
+    config += build_program_config('Mopidy-Instance', mopidy_config)
     if (os.path.exists(SERVER_CONFIG_PATH)):
         with open(SERVER_CONFIG_PATH, 'r') as f:
             data = json.load(f)
@@ -84,7 +84,7 @@ def main():
                 print('Writing extra mopidy supervisord config {index}/{server_count}')
                 mpd = str(server.get('mpd'))
                 http = str(server.get('http'))
-                config += build_program_config(f'Mopidy Instance {index}', mopidy_config, count=index, mpd=mpd, http=http)
+                config += build_program_config(f'Mopidy-Instance-{index}', mopidy_config, count=index, mpd=mpd, http=http)
     
     print('Writing supervisord config')
     write_supervisord_conf(config)
