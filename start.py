@@ -370,7 +370,7 @@ def clear_saved_streams(snapcast):
 
 
 def add_stream_to_snapcast(
-    name, pipe="tmp/snapfifo", host="localhost", port=1780, use_ssl=False, **kwargs
+    name, pipe="/tmp/snapfifo", host="localhost", port=1780, use_ssl=False, **kwargs
 ):
     remove_stream_from_snapcast(name, host=host, port=port, use_ssl=use_ssl)
     try:
@@ -378,7 +378,7 @@ def add_stream_to_snapcast(
             "id": 8,
             "jsonrpc": "2.0",
             "method": "Stream.AddStream",
-            "params": {"streamUri": f"pipe://{pipe}?name={name}"},
+            "params": {"streamUri": f"pipe://{pipe}?name={name}&sampleformat=44100:16:2"},
         }
         url = (
             f'http{"s" if use_ssl else ""}://{host}{f":{port}" if port else ""}/jsonrpc'
@@ -460,7 +460,7 @@ def start():
                     )
                     if snapcast:
                         response = add_stream_to_snapcast(
-                            server_name, pipe=f"tmp/snapfifo{index}", **snapcast
+                            server_name, pipe=f"/tmp/snapfifo{index}", **snapcast
                         )
                         stream_id = response.get("result", {}).get("id")
                         if stream_id:
