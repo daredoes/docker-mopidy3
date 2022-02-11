@@ -53,5 +53,6 @@ RUN chmod +x /start.py
 
 COPY ./start.sh /
 RUN chmod +x /start.sh
+STOPSIGNAL SIGINT
 
 ENTRYPOINT [ "/start.sh" ]

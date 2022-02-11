@@ -56,6 +56,7 @@ SecretStorage==2.3.1
 six==1.12.0
 soupsieve==1.9.5
 tornado==6.0.3
+typer==0.4.0
 uritools==3.0.0
 urllib3==1.25.7
 validictory==1.1.2
