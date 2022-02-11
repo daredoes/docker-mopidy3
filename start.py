@@ -35,7 +35,6 @@ port = 0.0.0.0:9001
 directory=/tmp
 command=/bin/python3 /start.py stop
 
-
 """
 
 DEFAULT_MOPIDY_CONFIG = """
@@ -253,6 +252,19 @@ CONFIG_PATH = "/config/mopidy.conf"
 SERVER_CONFIG_PATH = "/config/servers.json"
 SUPERVISORD_PATH = "/etc/supervisord.conf"
 STREAMS_PATH = "/etc/streams.csv"
+
+MOPIDY_SCAN_CONF = f"""
+[program:mopidy_local_scan]
+directory=/tmp
+environment = PYTHONUNBUFFERED=1
+redirect_stderr=true
+killasgroup=true
+stopasgroup=true
+autorestart=false
+command=/usr/bin/mopidy --config {CONFIG_PATH} local scan
+"""
+
+SUPERVISORD_CONF += MOPIDY_SCAN_CONF
 
 
 def write_supervisord_conf(contents):
