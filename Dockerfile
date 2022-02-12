@@ -48,11 +48,13 @@ COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 9001
 
-COPY ./start.py /
-RUN chmod +x /start.py
-
 COPY ./start.sh /
 RUN chmod +x /start.sh
+COPY ./start_mopidy.sh /
+RUN chmod +x /start_mopidy.sh
+
+COPY ./start.py /
+RUN chmod +x /start.py
 STOPSIGNAL SIGINT
 
 ENTRYPOINT [ "/start.sh" ]

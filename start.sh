@@ -1,12 +1,18 @@
 #!/bin/sh
 
-# Install requirements from user-provided pip file
-REQUIREMENTS_FILE=/config/requirements.txt
-if test -f "$REQUIREMENTS_FILE"; then
-    echo "$REQUIREMENTS_FILE exists, installing requirements."
-    python3 -m pip install -r $REQUIREMENTS_FILE
-fi
+python3 /start.py build
 
-python3 /start.py start
+# Exit all child processes properly
+shutdown () {
+  echo "Trapped SIGTERM/SIGINT/x so shutting down supervisord gracefully..."
+  kill $SUPERVISOR_PID
+  wait $SUPERVISOR_PID
+  exit 0
+}
 
-/usr/bin/supervisord
+trap shutdown HUP TERM INT
+
+/usr/bin/supervisord &
+SUPERVISOR_PID=$!
+
+wait "${SUPERVISOR_PID}"

@@ -3,6 +3,7 @@ import os
 import re
 import json
 import configparser
+import string
 import requests
 import signal
 import time
@@ -15,11 +16,11 @@ program_template_string = """
 [program:{name}]
 directory=/tmp
 process_name={process_name}
-environment = PYTHONUNBUFFERED=1
+environment = PYTHONUNBUFFERED=1,COUNT="{count}",CONFIG_FILEPATH="{filepath}",STREAM_ID="{stream_id}"
 redirect_stderr=true
 killasgroup=true
 stopasgroup=true
-command=/usr/bin/mopidy {options}
+command=/usr/bin/sh /start_mopidy.sh
 """
 
 SUPERVISORD_CONF = """
@@ -31,10 +32,14 @@ nodaemon=true
 [inet_http_server]
 port = 0.0.0.0:9001
 
+
+
+"""
+
+"""
 [program:cleanup]
 directory=/tmp
 command=/bin/python3 /start.py stop
-
 """
 
 DEFAULT_MOPIDY_CONFIG = """
@@ -261,6 +266,7 @@ redirect_stderr=true
 killasgroup=true
 stopasgroup=true
 autorestart=false
+autostart=false
 command=/usr/bin/mopidy --config {CONFIG_PATH} local scan
 """
 
@@ -325,7 +331,9 @@ def build_program_config(name, mopidy_config, mpd=None, http=None, count=""):
         options += f"--config {config_filepath}"
     command = program_template_string.format(
         name=f"mopidy{count}",
-        options=options,
+        stream_id=name,
+        count=count,
+        filepath=config_filepath,
         process_name=f"{name}".replace(" ", "_").replace(":", "-"),
     )
     return command
@@ -378,7 +386,9 @@ def add_stream_to_snapcast(
             "id": 8,
             "jsonrpc": "2.0",
             "method": "Stream.AddStream",
-            "params": {"streamUri": f"pipe://{pipe}?name={name}&sampleformat=44100:16:2"},
+            "params": {
+                "streamUri": f"pipe://{pipe}?name={name}&sampleformat=44100:16:2"
+            },
         }
         url = (
             f'http{"s" if use_ssl else ""}://{host}{f":{port}" if port else ""}/jsonrpc'
@@ -450,7 +460,7 @@ def start():
             server_count = len(servers.keys())
             print(f"Writing {server_count} extra mopidy supervisord configs")
             for index, server in enumerate(servers.items(), start=1):
-                print("Writing extra mopidy supervisord config {index}/{server_count}")
+                print(f"Writing extra mopidy supervisord config {index}/{server_count}")
                 server_name, server_config = server
                 mpd = str(server_config.get("mpd"))
                 http = str(server_config.get("http"))
@@ -476,6 +486,63 @@ def start():
 
     print("Writing supervisord config")
     write_supervisord_conf(config)
+
+
+@app.command()
+def build():
+    mopidy_config = ""
+    if os.path.exists(CONFIG_PATH):
+        mopidy_config = CONFIG_PATH
+
+    config = SUPERVISORD_CONF
+    # Build Main Instance
+
+    if os.path.exists(SERVER_CONFIG_PATH):
+        with open(SERVER_CONFIG_PATH, "r") as f:
+            data = json.load(f)
+            servers = dict(data.get("servers", {}))
+            server_count = len(servers.keys())
+            print(f"Writing {server_count} extra mopidy supervisord configs")
+            for index, server in enumerate(servers.items(), start=1):
+                print("Writing extra mopidy supervisord config {index}/{server_count}")
+                server_name, server_config = server
+                mpd = str(server_config.get("mpd"))
+                http = str(server_config.get("http"))
+                if mpd and http:
+                    config += build_program_config(
+                        server_name, mopidy_config, count=index, mpd=mpd, http=http
+                    )
+    else:
+        print("Writing main mopidy supervisord config")
+        config += build_program_config(MAIN_SERVER_NAME, mopidy_config)
+
+    print("Writing supervisord config")
+    write_supervisord_conf(config)
+
+
+@app.command()
+def cleanup():
+    name = os.environ.get('STREAM_ID')
+    if name and os.path.exists(SERVER_CONFIG_PATH):
+        with open(SERVER_CONFIG_PATH, "r") as f:
+            data = json.load(f)
+            snapcast = dict(data.get("snapcast", {}))
+            if snapcast:
+                print(f"Found snapcast settings\n{snapcast}")
+                remove_stream_from_snapcast(name, **snapcast)
+
+
+@app.command()
+def create():
+    name = os.environ.get('STREAM_ID')
+    count = os.environ.get('COUNT')
+    if name and os.path.exists(SERVER_CONFIG_PATH):
+        with open(SERVER_CONFIG_PATH, "r") as f:
+            data = json.load(f)
+            snapcast = dict(data.get("snapcast", {}))
+            if snapcast:
+                print(f"Found snapcast settings\n{snapcast}")
+                add_stream_to_snapcast(name, pipe=f"/data/snapfifo{count}", **snapcast)
 
 
 if __name__ == "__main__":
