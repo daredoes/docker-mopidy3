@@ -281,7 +281,7 @@ def create(stream_id: str = ""):
             if mpd and http:
                 
                 config_filepath = modify_mopidy_conf(
-                    TEMPLATE_MOPIDY_PATH, mpd=mpd, http=http, count=count
+                    CONFIG_PATH, mpd=mpd, http=http, count=count
                 )
                 print(f"Wrote config to: {config_filepath}")
         if snapcast:
