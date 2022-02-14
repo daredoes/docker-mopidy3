@@ -1,6 +1,6 @@
 #!/bin/sh
 
-python3 /start.py build
+python3 /start.py create-supervisord-conf
 
 # Exit all child processes properly
 shutdown () {
@@ -12,7 +12,7 @@ shutdown () {
 
 trap shutdown HUP TERM INT
 
-/usr/bin/supervisord &
+/usr/bin/supervisord -c /etc/supervisord.conf &
 SUPERVISOR_PID=$!
 
 wait "${SUPERVISOR_PID}"

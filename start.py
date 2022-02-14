@@ -1,293 +1,39 @@
 #!/bin/python3
 import os
-import re
 import json
 import configparser
-import string
 import requests
 import signal
-import time
-import logging
+import hashlib
 import typer
 
 app = typer.Typer()
-
-program_template_string = """
-[program:{name}]
-directory=/tmp
-process_name={process_name}
-environment = PYTHONUNBUFFERED=1,COUNT="{count}",CONFIG_FILEPATH="{filepath}",STREAM_ID="{stream_id}"
-redirect_stderr=true
-killasgroup=true
-stopasgroup=true
-command=/usr/bin/sh /start_mopidy.sh
-"""
-
-SUPERVISORD_CONF = """
-[supervisord]
-logfile=/var/log/supervisor/supervisord.log
-pidfile=/var/run/supervisord.pid
-nodaemon=true
-
-[inet_http_server]
-port = 0.0.0.0:9001
-
-
-
-"""
-
-"""
-[program:cleanup]
-directory=/tmp
-command=/bin/python3 /start.py stop
-"""
-
-DEFAULT_MOPIDY_CONFIG = """
-[core]
-cache_dir = $XDG_CACHE_DIR/mopidy
-config_dir = $XDG_CONFIG_DIR/mopidy
-data_dir = $XDG_DATA_DIR/mopidy
-max_tracklist_length = 10000
-restore_state = false
-
-[logging]
-verbosity = 1
-format = %(levelname)-8s %(asctime)s [%(process)d:%(threadName)s] %(name)s\n  %(message)s
-color = true
-config_file =
-
-[audio]
-mixer = software
-mixer_volume = 
-output = tee name=t ! queue ! audioresample ! audioconvert ! audio/x-raw,rate=48000,channels=2,format=S16LE ! filesink location=/tmp/snapfifo t. 
-buffer_time = 
-
-[youtube]
-enabled = true
-allow_cache = 
-youtube_api_key = 
-search_results = 15
-playlist_max_videos = 20
-api_enabled = false
-channel_id = 
-musicapi_enabled = false
-musicapi_cookie = 
-autoplay_enabled = false
-strict_autoplay = false
-max_autoplay_length = 600
-max_degrees_of_separation = 3
-youtube_dl_package = youtube_dl
-
-[tunein]
-enabled = false
-timeout = 5000
-filter = 
-
-[podcast]
-enabled = false
-browse_root = Podcasts.opml
-browse_order = desc
-lookup_order = asc
-cache_size = 64
-cache_ttl = 86400
-timeout = 10
-
-[podcast-itunes]
-enabled = false
-base_url = http://itunes.apple.com/
-country = US
-explicit = 
-charts = audioPodcasts
-charts_limit = 20
-search_limit = 20
-timeout = 10
-retries = 3
-
-[musicbox_webclient]
-enabled = false
-musicbox = false
-websocket_host = 
-websocket_port = 
-on_track_click = PLAY_ALL
-
-[muse]
-enabled = true
-mopidy_host = 
-mopidy_port = 
-mopidy_ssl = false
-snapcast_host = 
-snapcast_port = 
-snapcast_ssl = false
-
-[mpd]
-enabled = true
-hostname = 0.0.0.0
-port = 6600
-password = 
-max_connections = 20
-connection_timeout = 60
-default_playlist_scheme = m3u
-
-[mobile]
-enabled = false
-title = Mopidy Mobile on $hostname
-ws_url = 
-
-[local-images]
-enabled = true
-library = json
-base_uri = /images/
-image_dir = 
-album_art_files = 
-  *.jpg
-  *.jpeg
-  *.png
-
-[iris]
-enabled = true
-country = US
-locale = en_US
-verify_certificates = true
-snapcast_enabled = false
-snapcast_host = 
-snapcast_port = 
-snapcast_ssl = 
-snapcast_stream = Iris
-spotify_authorization_url = https://jamesbarnsley.co.nz/iris/auth_spotify.php
-lastfm_authorization_url = https://jamesbarnsley.co.nz/iris/auth_lastfm.php
-genius_authorization_url = https://jamesbarnsley.co.nz/iris/auth_genius.php
-data_dir = $XDG_DATA_DIR/iris
-
-[file]
-enabled = true
-media_dirs = 
-  $XDG_MUSIC_DIR|Music
-  ~/|Home
-excluded_file_extensions = 
-  .directory
-  .html
-  .jpeg
-  .jpg
-  .log
-  .nfo
-  .pdf
-  .png
-  .txt
-  .zip
-show_dotfiles = false
-follow_symlinks = false
-metadata_timeout = 1000
-
-[http]
-enabled = true
-hostname = 0.0.0.0
-port = 6680
-allowed_origins = 
-csrf_protection = true
-default_app = mopidy
-
-[m3u]
-enabled = true
-base_dir =
-default_encoding = latin-1
-default_extension = .m3u8
-playlists_dir =
-
-[softwaremixer]
-enabled = true
-
-[stream]
-enabled = true
-protocols = 
-  http
-  https
-  mms
-  rtmp
-  rtmps
-  rtsp
-metadata_blacklist = 
-timeout = 5000
-
-
-[soundcloud]
-enabled = false  ; Extension disabled due to config errors.
-explore_songs = 25
-auth_token =   ; Must be set.
-
-[local]
-enabled = true  ; Extension disabled due to config errors.
-max_search_results = 100
-media_dir = /media; Must be set.
-scan_timeout = 1000
-scan_flush_threshold = 100
-scan_follow_symlinks = false
-included_file_extensions = 
-excluded_file_extensions = 
-  .cue
-  .directory
-  .html
-  .jpeg
-  .jpg
-  .log
-  .nfo
-  .pdf
-  .png
-  .txt
-  .zip
-directories = 
-  Albums                  local:directory?type=album
-  Artists                 local:directory?type=artist
-  Composers               local:directory?type=artist&role=composer
-  Genres                  local:directory?type=genre
-  Performers              local:directory?type=artist&role=performer
-  Release Years           local:directory?type=date&format=%25Y
-  Tracks                  local:directory?type=track
-  Last Week's Updates     local:directory?max-age=604800
-  Last Month's Updates    local:directory?max-age=2592000
-timeout = 10
-use_artist_sortname = false
-album_art_files = 
-  *.jpg
-  *.jpeg
-  *.png
-
-"""
 
 CONFIG_PATH = "/config/mopidy.conf"
 SERVER_CONFIG_PATH = "/config/servers.json"
 SUPERVISORD_PATH = "/etc/supervisord.conf"
 STREAMS_PATH = "/etc/streams.csv"
 
-MOPIDY_SCAN_CONF = f"""
-[program:mopidy_local_scan]
-directory=/tmp
-environment = PYTHONUNBUFFERED=1
-redirect_stderr=true
-killasgroup=true
-stopasgroup=true
-autorestart=false
-autostart=false
-command=/usr/bin/mopidy --config {CONFIG_PATH} local scan
-"""
+TEMPLATE_MOPIDY_PATH = "/home/templates/mopidy.conf"
+TEMPLATE_SUPERVISORD_MOPIDY_PATH = "/home/templates/supervisord-mopidy.conf"
+TEMPLATE_SUPERVISORD_PATH = "/home/templates/supervisord.conf"
 
-SUPERVISORD_CONF += MOPIDY_SCAN_CONF
+def string_to_hex(string):
+    return hashlib.sha1(str(string).encode('utf-8')).hexdigest()
+
+
+def write_file_contents(filepath, contents):
+    with open(filepath, "w") as f:
+        f.write(contents)
+
+
+def read_file_contents(filepath):
+    with open(filepath, "r") as f:
+        return f.read()
 
 
 def write_supervisord_conf(contents):
-    with open(SUPERVISORD_PATH, "w") as f:
-        f.write(contents)
-
-
-def write_stream_ids_csv(contents):
-    with open(STREAMS_PATH, "w") as f:
-        f.write(contents)
-
-
-def read_stream_ids_csv():
-    if os.path.exists(STREAMS_PATH):
-        with open(STREAMS_PATH, "r") as f:
-            return f.read().split(",")
-    return []
+    write_file_contents(SUPERVISORD_PATH, contents)
 
 
 def write_mopidy_config(modified_config, count=""):
@@ -298,45 +44,27 @@ def write_mopidy_config(modified_config, count=""):
     return path
 
 
-def sub_group_in_regex(regex, substitute, config):
-    result = re.sub(regex, substitute, config)
-    return str(result)
-
-
 def modify_mopidy_conf(config, mpd=None, http=None, count=""):
     snapfifo = f"/tmp/snapfifo{count}"
     modified_config = configparser.ConfigParser()
     if os.path.exists(config):
         modified_config.read(config)
     else:
-        modified_config.read_string(DEFAULT_MOPIDY_CONFIG)
+        with open(TEMPLATE_MOPIDY_PATH, "r") as f:
+            modified_config.read_file(f)
     if mpd:
-        print(f"modify mpd with port {mpd}")
+        print(f"modified mpd with port {mpd}")
         modified_config["mpd"]["port"] = mpd
     if http:
-        print(f"modify http with port {http}")
+        print(f"modified http with port {http}")
         modified_config["http"]["port"] = http
     if snapfifo:
-        print(f"modify snapfifo with folder {snapfifo}")
+        print(f"modified snapfifo with folder {snapfifo}")
         modified_config["audio"]["output"] = modified_config["audio"]["output"].replace(
             "/tmp/snapfifo", snapfifo
         )
+    # Returns filepath of new config
     return write_mopidy_config(modified_config, count)
-
-
-def build_program_config(name, mopidy_config, mpd=None, http=None, count=""):
-    options = ""
-    config_filepath = modify_mopidy_conf(mopidy_config, mpd=mpd, http=http, count=count)
-    if os.path.exists(config_filepath):
-        options += f"--config {config_filepath}"
-    command = program_template_string.format(
-        name=f"mopidy{count}",
-        stream_id=name,
-        count=count,
-        filepath=config_filepath,
-        process_name=f"{name}".replace(" ", "_").replace(":", "-"),
-    )
-    return command
 
 
 def remove_stream_from_snapcast(
@@ -366,15 +94,6 @@ def remove_stream_from_snapcast(
             return response_json
     except Exception:
         return {}
-
-
-def clear_saved_streams(snapcast):
-    print("Reading streams")
-    stream_ids = read_stream_ids_csv()
-    print(f"Got streams: {stream_ids}")
-    for stream_id in stream_ids:
-        print(f"Clearing stream: {stream_id}")
-        remove_stream_from_snapcast(stream_id, **snapcast)
 
 
 def add_stream_to_snapcast(
@@ -409,18 +128,6 @@ def add_stream_to_snapcast(
         return {}
 
 
-MAIN_SERVER_NAME = "Home"
-
-
-def clear_saved_streams_from_file():
-    if os.path.exists(SERVER_CONFIG_PATH):
-        with open(SERVER_CONFIG_PATH, "r") as f:
-            data = json.load(f)
-            snapcast = dict(data.get("snapcast", {}))
-            print(f"Found snapcast settings\n{snapcast}")
-            clear_saved_streams(snapcast)
-
-
 class GracefulKiller:
     kill_now = False
 
@@ -432,98 +139,124 @@ class GracefulKiller:
         self.kill_now = True
 
 
-@app.command()
-def stop():
-    killer = GracefulKiller()
-    while not killer.kill_now:
-        time.sleep(1)
-        logging.info("Waiting for cleanup process")
+# How to use Graceful Killer
+# @app.command()
+# def stop():
+#     killer = GracefulKiller()
+#     while not killer.kill_now:
+#         time.sleep(1)
+#         print("Waiting for cleanup process")
 
-    logging.info("Attempting to clean up snapcast streams")
-    clear_saved_streams_from_file()
+#     print("Do something here during clean up")
 
 
-@app.command()
-def start():
-    mopidy_config = ""
-    if os.path.exists(CONFIG_PATH):
-        mopidy_config = CONFIG_PATH
+class SupervisordMopidyConfBuilder:
+    config = configparser.ConfigParser(default_section=None)
 
-    config = SUPERVISORD_CONF
-    # Build Main Instance
+    def __init__(self) -> None:
+        filepath = TEMPLATE_SUPERVISORD_MOPIDY_PATH
+        if os.path.exists(filepath):
+            print(f'Loading supervisord mopidy config from "{filepath}')
+            with open(filepath, 'r') as f:
+                self.config.read_file(f)
 
-    stream_ids = []
+    def get_instance_config(self, stream_id: str, config_filepath: str):
+        instance_config = {}
+        count = string_to_hex(stream_id)
+        try:
+            for options in self.config.items("program"):
+                option, value = options
+                instance_config[option] = value
+        except configparser.NoSectionError:
+            pass
+        if not instance_config.get("process_name"):
+            instance_config["process_name"] = stream_id.replace(' ', '_')
+        env_vars = instance_config.get("environment", "")
+        split_vars = []
+        if env_vars:
+            split_vars.extend(env_vars.split(","))
+        if "STREAM_ID" not in split_vars:
+            split_vars.append(f"STREAM_ID=\"{stream_id}\"")
+        if "CONFIG_FILEPATH" not in split_vars:
+            split_vars.append(f"CONFIG_FILEPATH={config_filepath}")
+        instance_config["environment"] = ",".join(split_vars)
+
+        return {f"program:mopidy{count}": instance_config}
+
+
+class SupervisordConfBuilder:
+    config = configparser.ConfigParser(default_section=None)
+
+    def __init__(self) -> None:
+        filepath = TEMPLATE_SUPERVISORD_PATH
+        if os.path.exists(filepath):
+            print(f'Loading supervisord config from "{filepath}')
+            with open(filepath, 'r') as f:
+                self.config.read_file(f)
+
+    def add_program(self, name: str, options: dict) -> None:
+        try:
+            self.config.add_section(name)
+        except configparser.DuplicateSectionError:
+            pass
+        self.config[name] = options
+
+    def remove_program(self, name: str) -> bool:
+        return self.config.remove_section(name)
+    
+    def save(self) -> None:
+        with open(SUPERVISORD_PATH, 'w') as f:
+            self.config.write(f)
+
+
+def get_server_config_data() -> dict:
+    data = {}
     if os.path.exists(SERVER_CONFIG_PATH):
+        # Read file, and quickly close
         with open(SERVER_CONFIG_PATH, "r") as f:
             data = json.load(f)
-            servers = dict(data.get("servers", {}))
-            snapcast = dict(data.get("snapcast", {}))
-            server_count = len(servers.keys())
-            print(f"Writing {server_count} extra mopidy supervisord configs")
-            for index, server in enumerate(servers.items(), start=1):
-                print(f"Writing extra mopidy supervisord config {index}/{server_count}")
-                server_name, server_config = server
-                mpd = str(server_config.get("mpd"))
-                http = str(server_config.get("http"))
-                if mpd and http:
-                    config += build_program_config(
-                        server_name, mopidy_config, count=index, mpd=mpd, http=http
-                    )
-                    if snapcast:
-                        response = add_stream_to_snapcast(
-                            server_name, pipe=f"/data/snapfifo{index}", **snapcast
-                        )
-                        stream_id = response.get("result", {}).get("id")
-                        if stream_id:
-                            print(f"Added stream id: {stream_id}")
-                            stream_ids.append(stream_id)
-    else:
-        print("Writing main mopidy supervisord config")
-        config += build_program_config(MAIN_SERVER_NAME, mopidy_config)
-
-    if stream_ids:
-        print("Writing stream ids csv")
-        write_stream_ids_csv(",".join(stream_ids))
-
-    print("Writing supervisord config")
-    write_supervisord_conf(config)
+    return data
 
 
 @app.command()
-def build():
-    mopidy_config = ""
-    if os.path.exists(CONFIG_PATH):
-        mopidy_config = CONFIG_PATH
+def create_supervisord_conf():
+    supervisord_config_builder = SupervisordConfBuilder()
+    supervisord_mopidy_config_builder = SupervisordMopidyConfBuilder()
 
-    config = SUPERVISORD_CONF
-    # Build Main Instance
-
-    if os.path.exists(SERVER_CONFIG_PATH):
-        with open(SERVER_CONFIG_PATH, "r") as f:
-            data = json.load(f)
-            servers = dict(data.get("servers", {}))
-            server_count = len(servers.keys())
-            print(f"Writing {server_count} extra mopidy supervisord configs")
-            for index, server in enumerate(servers.items(), start=1):
-                print("Writing extra mopidy supervisord config {index}/{server_count}")
-                server_name, server_config = server
-                mpd = str(server_config.get("mpd"))
-                http = str(server_config.get("http"))
-                if mpd and http:
-                    config += build_program_config(
-                        server_name, mopidy_config, count=index, mpd=mpd, http=http
-                    )
+    data = get_server_config_data()
+    print(f'Got data', data)
+    servers = data.get("servers", {})
+    if servers:
+        server_count = len(servers.keys())
+        print(f"Writing {server_count} mopidy supervisord configs")
+        for index, server_name in enumerate(servers.keys(), start=1):
+            print(f"Writing mopidy supervisord config {index}/{server_count}")
+            server_name
+            mopidy_configs = supervisord_mopidy_config_builder.get_instance_config(
+                server_name, f"/tmp/mopidy{string_to_hex(server_name)}.conf"
+            )
+            for program_name, program_options in mopidy_configs.items():
+                supervisord_config_builder.add_program(
+                    program_name,
+                    program_options,
+                )
     else:
         print("Writing main mopidy supervisord config")
-        config += build_program_config(MAIN_SERVER_NAME, mopidy_config)
-
-    print("Writing supervisord config")
-    write_supervisord_conf(config)
+        server_name = os.environ.get("STREAM_NAME", "Home")
+        mopidy_configs = supervisord_mopidy_config_builder.get_instance_config(
+            server_name, f"/tmp/mopidy.conf"
+        )
+        for program_name, program_options in mopidy_configs.items():
+            supervisord_config_builder.add_program(
+                program_name,
+                program_options,
+            )
+    supervisord_config_builder.save()
 
 
 @app.command()
-def cleanup():
-    name = os.environ.get("STREAM_ID")
+def cleanup(stream_id: str = ""):
+    name = os.environ.get("STREAM_ID", stream_id)
     if name and os.path.exists(SERVER_CONFIG_PATH):
         with open(SERVER_CONFIG_PATH, "r") as f:
             data = json.load(f)
@@ -534,16 +267,30 @@ def cleanup():
 
 
 @app.command()
-def create():
-    name = os.environ.get("STREAM_ID")
-    count = os.environ.get("COUNT")
-    if name and os.path.exists(SERVER_CONFIG_PATH):
-        with open(SERVER_CONFIG_PATH, "r") as f:
-            data = json.load(f)
-            snapcast = dict(data.get("snapcast", {}))
-            if snapcast:
-                print(f"Found snapcast settings\n{snapcast}")
-                add_stream_to_snapcast(name, pipe=f"/data/snapfifo{count}", **snapcast)
+def create(stream_id: str = ""):
+    name = os.environ.get("STREAM_ID", stream_id)
+    count = string_to_hex(name)
+    if name:
+        data = get_server_config_data()
+        server_config = data.get("servers", {}).get(name, {})
+        print(data)
+        snapcast = data.get("snapcast", {})
+        if server_config:
+            mpd = str(server_config.get("mpd"))
+            http = str(server_config.get("http"))
+            if mpd and http:
+                
+                config_filepath = modify_mopidy_conf(
+                    TEMPLATE_MOPIDY_PATH, mpd=mpd, http=http, count=count
+                )
+                print(f"Wrote config to: {config_filepath}")
+        if snapcast:
+            print(f"Found snapcast settings")
+            add_stream_to_snapcast(name, pipe=f"/data/snapfifo{count}", **snapcast)
+    else:
+        print(
+            "Trying to create stream without name. Make sure STREAM_ID is set in the environment"
+        )
 
 
 if __name__ == "__main__":

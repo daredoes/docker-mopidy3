@@ -57,4 +57,6 @@ COPY ./start.py /
 RUN chmod +x /start.py
 STOPSIGNAL SIGINT
 
+COPY ./templates /home/templates
+
 ENTRYPOINT [ "/start.sh" ]
