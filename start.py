@@ -382,12 +382,13 @@ def add_stream_to_snapcast(
 ):
     remove_stream_from_snapcast(name, host=host, port=port, use_ssl=use_ssl)
     try:
+        sample_format = os.environ.get("SNAPCAST_SAMPLEFORMAT", "44100:16:2")
         payload = {
             "id": 8,
             "jsonrpc": "2.0",
             "method": "Stream.AddStream",
             "params": {
-                "streamUri": f"pipe://{pipe}?name={name}&sampleformat=44100:16:2"
+                "streamUri": f"pipe://{pipe}?name={name}&sampleformat={sample_format}&send_to_muted=false&controlscript=meta_mpd.py"
             },
         }
         url = (
@@ -522,7 +523,7 @@ def build():
 
 @app.command()
 def cleanup():
-    name = os.environ.get('STREAM_ID')
+    name = os.environ.get("STREAM_ID")
     if name and os.path.exists(SERVER_CONFIG_PATH):
         with open(SERVER_CONFIG_PATH, "r") as f:
             data = json.load(f)
@@ -534,8 +535,8 @@ def cleanup():
 
 @app.command()
 def create():
-    name = os.environ.get('STREAM_ID')
-    count = os.environ.get('COUNT')
+    name = os.environ.get("STREAM_ID")
+    count = os.environ.get("COUNT")
     if name and os.path.exists(SERVER_CONFIG_PATH):
         with open(SERVER_CONFIG_PATH, "r") as f:
             data = json.load(f)
