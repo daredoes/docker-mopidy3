@@ -39,7 +39,8 @@ RUN python3 -m pip install -r /requirements.txt
 RUN apt-get install -y libmpg123-dev libmp3lame-dev gstreamer1.0-tools gstreamer1.0-alsa
 # Needed for ubuntu-advantage-tools EULA
 RUN echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
-RUN apt-get install -y ubuntu-restricted-extras
+RUN apt-get update
+RUN apt-get install -y --fix-missing ubuntu-restricted-extras
 
 RUN apt-get install -y supervisor && apt-get clean
 RUN mkdir -p /var/log/supervisor
