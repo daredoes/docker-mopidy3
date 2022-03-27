@@ -18,8 +18,9 @@ TEMPLATE_MOPIDY_PATH = "/home/templates/mopidy.conf"
 TEMPLATE_SUPERVISORD_MOPIDY_PATH = "/home/templates/supervisord-mopidy.conf"
 TEMPLATE_SUPERVISORD_PATH = "/home/templates/supervisord.conf"
 
+
 def string_to_hex(string):
-    return hashlib.sha1(str(string).encode('utf-8')).hexdigest()
+    return hashlib.sha1(str(string).encode("utf-8")).hexdigest()
 
 
 def write_file_contents(filepath, contents):
@@ -44,7 +45,9 @@ def write_mopidy_config(modified_config, count=""):
     return path
 
 
-def modify_mopidy_conf(config, mpd=None, http=None, count=""):
+def modify_mopidy_conf(
+    config, mpd=None, http=None, count="", name="", snapcast: dict = None
+):
     snapfifo = f"/tmp/snapfifo{count}"
     modified_config = configparser.ConfigParser()
     if os.path.exists(config):
@@ -58,6 +61,24 @@ def modify_mopidy_conf(config, mpd=None, http=None, count=""):
     if http:
         print(f"modified http with port {http}")
         modified_config["http"]["port"] = http
+    if modified_config["iris"]:
+        if name:
+            print(f"modified iris with stream {name}")
+            modified_config["iris"]["snapcast_stream"] = name
+        if snapcast:
+            modified_config["iris"]["snapcast_enabled"] = "true"
+            host = snapcast.get("host", None)
+            port = snapcast.get("port", None)
+            ssl = snapcast.get("use_ssl", None)
+            if host:
+                modified_config["iris"]["snapcast_host"] = host
+                print(f"modified iris with host {host}")
+            if port:
+                modified_config["iris"]["snapcast_port"] = f'{port}'
+                print(f"modified iris with port {port}")
+            if ssl:
+                modified_config["iris"]["snapcast_ssl"] = "true" if ssl else "false"
+                print(f"modified iris with ssl {ssl}")
     if snapfifo:
         print(f"modified snapfifo with folder {snapfifo}")
         modified_config["audio"]["output"] = modified_config["audio"]["output"].replace(
@@ -157,7 +178,7 @@ class SupervisordMopidyConfBuilder:
         filepath = TEMPLATE_SUPERVISORD_MOPIDY_PATH
         if os.path.exists(filepath):
             print(f'Loading supervisord mopidy config from "{filepath}')
-            with open(filepath, 'r') as f:
+            with open(filepath, "r") as f:
                 self.config.read_file(f)
 
     def get_instance_config(self, stream_id: str, config_filepath: str):
@@ -170,13 +191,13 @@ class SupervisordMopidyConfBuilder:
         except configparser.NoSectionError:
             pass
         if not instance_config.get("process_name"):
-            instance_config["process_name"] = stream_id.replace(' ', '_')
+            instance_config["process_name"] = stream_id.replace(" ", "_")
         env_vars = instance_config.get("environment", "")
         split_vars = []
         if env_vars:
             split_vars.extend(env_vars.split(","))
         if "STREAM_ID" not in split_vars:
-            split_vars.append(f"STREAM_ID=\"{stream_id}\"")
+            split_vars.append(f'STREAM_ID="{stream_id}"')
         if "CONFIG_FILEPATH" not in split_vars:
             split_vars.append(f"CONFIG_FILEPATH={config_filepath}")
         instance_config["environment"] = ",".join(split_vars)
@@ -191,7 +212,7 @@ class SupervisordConfBuilder:
         filepath = TEMPLATE_SUPERVISORD_PATH
         if os.path.exists(filepath):
             print(f'Loading supervisord config from "{filepath}')
-            with open(filepath, 'r') as f:
+            with open(filepath, "r") as f:
                 self.config.read_file(f)
 
     def add_program(self, name: str, options: dict) -> None:
@@ -203,9 +224,9 @@ class SupervisordConfBuilder:
 
     def remove_program(self, name: str) -> bool:
         return self.config.remove_section(name)
-    
+
     def save(self) -> None:
-        with open(SUPERVISORD_PATH, 'w') as f:
+        with open(SUPERVISORD_PATH, "w") as f:
             self.config.write(f)
 
 
@@ -224,7 +245,7 @@ def create_supervisord_conf():
     supervisord_mopidy_config_builder = SupervisordMopidyConfBuilder()
 
     data = get_server_config_data()
-    print(f'Got data', data)
+    print(f"Got data", data)
     servers = data.get("servers", {})
     if servers:
         server_count = len(servers.keys())
@@ -279,9 +300,14 @@ def create(stream_id: str = ""):
             mpd = str(server_config.get("mpd"))
             http = str(server_config.get("http"))
             if mpd and http:
-                
+
                 config_filepath = modify_mopidy_conf(
-                    CONFIG_PATH, mpd=mpd, http=http, count=count
+                    CONFIG_PATH,
+                    mpd=mpd,
+                    http=http,
+                    count=count,
+                    name=name,
+                    snapcast=snapcast,
                 )
                 print(f"Wrote config to: {config_filepath}")
         if snapcast:

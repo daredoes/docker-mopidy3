@@ -21,7 +21,7 @@ MechanicalSoup==0.12.0
 mock==3.0.5
 Mopidy==3.2.0
 Mopidy-GMusic==4.0.0
-Mopidy-Iris==3.61.1
+Mopidy-Iris==3.62.0
 Mopidy-Local==3.2.1
 Mopidy-Local-Images==1.0.0
 Mopidy-Mobile==1.9.1

@@ -12,6 +12,10 @@ shutdown () {
 
 trap shutdown HUP TERM INT
 
+export XDG_CACHE_DIR=/config/cache
+export XDG_CONFIG_DIR=/config
+export XDG_DATA_DIR=/config/data
+export XDG_RUNTIME_DIR=/tmp/
 /usr/bin/supervisord -c /etc/supervisord.conf &
 SUPERVISOR_PID=$!
 
