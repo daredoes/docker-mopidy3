@@ -61,4 +61,9 @@ STOPSIGNAL SIGINT
 COPY ./templates /home/templates
 RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "root ALL=NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers
 
+COPY ./env_vars.sh /
+RUN chmod +x /env_vars.sh
+RUN bash /env_vars.sh >> ~/.bashrc
+
+
 ENTRYPOINT [ "/start.sh" ]
