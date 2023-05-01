@@ -24,12 +24,8 @@ RUN wget -q -O /etc/apt/sources.list.d/mopidy.list https://apt.mopidy.com/buster
 RUN apt-get update --allow-insecure-repositories
 RUN apt-get -y upgrade
 RUN apt-get install -y --allow-unauthenticated mopidy
-RUN apt-get install -y --allow-unauthenticated mopidy-spotify
-RUN apt-get install -y --allow-unauthenticated mopidy-soundcloud
 RUN apt-get install -y --allow-unauthenticated mopidy-local
-RUN apt-get install -y --allow-unauthenticated mopidy-gmusic
 RUN apt-get install -y --allow-unauthenticated mopidy-mpd
-RUN apt-get install -y --allow-unauthenticated mopidy-internetarchive
 
 COPY ./requirements.txt /
 RUN python3 -m pip install pycairo
@@ -61,9 +57,14 @@ STOPSIGNAL SIGINT
 COPY ./templates /home/templates
 RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "root ALL=NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers
 
+COPY ./templates/mopidy.conf /config/mopidy.conf
 COPY ./env_vars.sh /
 RUN chmod +x /env_vars.sh
-RUN bash /env_vars.sh >> ~/.bashrc
+RUN bash /env_vars.sh > /.bashrc
+RUN echo "MOPIDY IRIS NEEDS THIS" >> /IS_CONTAINER
+
+COPY ./scan_library.sh /
+RUN chmod +x /scan_library.sh
 
 
 ENTRYPOINT [ "/start.sh" ]

@@ -66,7 +66,10 @@ def modify_mopidy_conf(
             print(f"modified iris with stream {name}")
             modified_config["iris"]["snapcast_stream"] = name
         if snapcast:
-            modified_config["iris"]["snapcast_enabled"] = "true"
+            if snapcast.get("enabled", False):
+                snapcast_enabled = "true" if snapcast.get("enable_in_iris", True) else "false"
+                print(f"modified iris with snapcast_enabled is {snapcast_enabled}")
+                modified_config["iris"]["snapcast_enabled"] = snapcast_enabled
             host = snapcast.get("host", None)
             port = snapcast.get("port", None)
             ssl = snapcast.get("use_ssl", None)
@@ -128,7 +131,7 @@ def add_stream_to_snapcast(
             "jsonrpc": "2.0",
             "method": "Stream.AddStream",
             "params": {
-                "streamUri": f"pipe://{pipe}?name={name}&sampleformat={sample_format}&send_to_muted=false&controlscript=meta_mpd.py"
+                "streamUri": f"pipe://{pipe}?name={name}&sampleformat={sample_format}&send_to_muted=false&controlscript=mopidy_meta.py"
             },
         }
         url = (

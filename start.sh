@@ -1,4 +1,5 @@
 #!/bin/sh
+# . /.bashrc
 
 python3 /start.py create-supervisord-conf
 
@@ -13,7 +14,7 @@ shutdown () {
 trap shutdown HUP TERM INT
 
 if [ -z "$LOADED_ENV" ]; then
-	sh /env_vars.sh >> ~/.bashrc
+	sh /env_vars.sh > /.bashrc
 fi
 
 /usr/bin/supervisord -c /etc/supervisord.conf &
