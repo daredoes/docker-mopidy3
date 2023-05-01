@@ -131,7 +131,7 @@ def add_stream_to_snapcast(
             "jsonrpc": "2.0",
             "method": "Stream.AddStream",
             "params": {
-                "streamUri": f"pipe://{pipe}?name={name}&sampleformat={sample_format}&send_to_muted=false&controlscript=mopidy_meta.py"
+                "streamUri": f"pipe://{pipe}?name={name}&sampleformat={sample_format}&send_to_muted=false&controlscript=meta_mopidy.py"
             },
         }
         url = (
@@ -147,8 +147,12 @@ def add_stream_to_snapcast(
         )
         if response.status_code == 200:
             response_json = response.json()
+            print("Added stream to Snapcast", response_json)
             return response_json
-    except Exception:
+        else:
+            print("bad response", response)
+    except Exception as e:
+        print(e)
         return {}
 
 

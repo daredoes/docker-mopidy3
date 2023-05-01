@@ -66,5 +66,17 @@ RUN echo "MOPIDY IRIS NEEDS THIS" >> /IS_CONTAINER
 COPY ./scan_library.sh /
 RUN chmod +x /scan_library.sh
 
+USER root
+RUN apt-get -y install cron
+
+# Add crontab file in the cron directory
+COPY ./cronjob /etc/cron.d/cronjob
+
+# Give execution rights on the cron job
+RUN chmod 0644 /etc/cron.d/cronjob
+
+# Apply cron job
+RUN crontab /etc/cron.d/cronjob
+# An empty line is required at the end of this file for a valid cron file.
 
 ENTRYPOINT [ "/start.sh" ]

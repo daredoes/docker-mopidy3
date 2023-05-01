@@ -17,6 +17,7 @@ if [ -z "$LOADED_ENV" ]; then
 	sh /env_vars.sh > /.bashrc
 fi
 
+cron &
 /usr/bin/supervisord -c /etc/supervisord.conf &
 SUPERVISOR_PID=$!
 
