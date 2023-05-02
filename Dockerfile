@@ -3,10 +3,10 @@ FROM ubuntu:20.04
 WORKDIR /media
 WORKDIR /tmp
 WORKDIR /config
+WORKDIR /cache
+WORKDIR /data
 
-EXPOSE 5555
-EXPOSE 6600
-EXPOSE 6680
+EXPOSE 5555 6600 6680 9001
 
 # Order based on how to effectively cache docker image
 RUN apt-get update
@@ -43,30 +43,9 @@ RUN mkdir -p /var/log/supervisor
 
 COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-EXPOSE 9001
+RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers
 
-COPY ./start.sh /
-RUN chmod +x /start.sh
-COPY ./start_mopidy.sh /
-RUN chmod +x /start_mopidy.sh
 
-COPY ./start.py /
-RUN chmod +x /start.py
-STOPSIGNAL SIGINT
-
-COPY ./templates /home/templates
-RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "root ALL=NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers
-
-COPY ./templates/mopidy.conf /config/mopidy.conf
-COPY ./env_vars.sh /
-RUN chmod +x /env_vars.sh
-RUN bash /env_vars.sh > /.bashrc
-RUN echo "MOPIDY IRIS NEEDS THIS" >> /IS_CONTAINER
-
-COPY ./scan_library.sh /
-RUN chmod +x /scan_library.sh
-
-USER root
 RUN apt-get -y install cron
 
 # Add crontab file in the cron directory
@@ -78,5 +57,34 @@ RUN chmod 0644 /etc/cron.d/cronjob
 # Apply cron job
 RUN crontab /etc/cron.d/cronjob
 # An empty line is required at the end of this file for a valid cron file.
+
+COPY ./start.sh /
+RUN chmod +x /start.sh
+COPY ./start_mopidy.sh /
+RUN chmod +x /start_mopidy.sh
+
+COPY ./start.py /
+RUN chmod +x /start.py
+STOPSIGNAL SIGINT
+
+COPY ./templates /home/templates
+
+COPY ./templates/mopidy.conf /config/mopidy.conf
+COPY ./env_vars.sh /
+RUN chmod +x /env_vars.sh
+RUN bash /env_vars.sh >> /etc/environment
+
+COPY ./scan_library.sh /
+RUN chmod +x /scan_library.sh
+
+
+# Allows any user to run mopidy, but runs by default as a randomly generated UID/GID.
+RUN set -ex \
+ && usermod -G audio,sudo mopidy \
+ && chown mopidy:audio -R /home /start.sh \
+ && chmod go+rwx -R /home /start.sh
+
+RUN echo "MOPIDY IRIS NEEDS THIS" >> /IS_CONTAINER
+RUN export DBUS_SESSION_BUS_ADDRESS=unix:path=/host/run/dbus/system_bus_socket
 
 ENTRYPOINT [ "/start.sh" ]
