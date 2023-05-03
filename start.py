@@ -6,6 +6,20 @@ import requests
 import signal
 import hashlib
 import typer
+import subprocess
+
+def kill_process_on_port(port):
+    try:
+        # Get the process ID (PID) associated with the specified port
+        cmd = f'lsof -t -i:{port}'
+        pid = subprocess.check_output(cmd.split()).decode().strip()
+
+        # Terminate the process with the specified PID
+        cmd = f'kill {pid}'
+        print(f'Killing {pid} for port {port}')
+        subprocess.call(cmd.split())
+    except:
+        print(f'No process that can be killed running on port {port}')
 
 app = typer.Typer()
 
@@ -306,8 +320,10 @@ def create(stream_id: str = ""):
         if server_config:
             mpd = str(server_config.get("mpd"))
             http = str(server_config.get("http"))
+            if mpd:
+                kill_process_on_port(mpd)
+                kill_process_on_port(http)
             if mpd and http:
-
                 config_filepath = modify_mopidy_conf(
                     CONFIG_PATH,
                     mpd=mpd,

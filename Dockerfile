@@ -46,7 +46,7 @@ COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers
 
 
-RUN apt-get -y install cron
+RUN apt-get -y install cron lsof
 
 # Add crontab file in the cron directory
 COPY ./cronjob /etc/cron.d/cronjob
