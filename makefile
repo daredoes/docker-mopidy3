@@ -7,7 +7,10 @@ run:
     -p 3000:9001 \
     -p 6680:6680 \
     --privileged \
-    -v /Users/dare/Git/docker-mopidy3/config:/config \
+    -v /Users/dare/Git/docker-mopidy3/cache:/home/cache \
+    -v /Users/dare/Git/docker-mopidy3/config:/etc/mopidy \
+    -v /Users/dare/Git/docker-mopidy3/data:/data \
+    -v /Volumes/NetBackup/Media/audio/youtubeDL:/media \
     $(DOCKER_REPO)/$(DOCKER_IMAGE)
 
 

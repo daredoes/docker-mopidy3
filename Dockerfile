@@ -1,11 +1,5 @@
 FROM ubuntu:20.04
 
-WORKDIR /media
-WORKDIR /tmp
-WORKDIR /config
-WORKDIR /cache
-WORKDIR /data
-
 EXPOSE 5555 6600 6680 9001
 
 # Order based on how to effectively cache docker image
@@ -30,12 +24,13 @@ COPY ./requirements.txt /
 RUN python3 -m pip install pycairo
 RUN python3 -m pip install -r /requirements.txt
 
-RUN apt-get install -y  && apt-get clean
 RUN mkdir -p /var/log/supervisor
 
 COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./templates/system.sh /home/system.sh
 
-RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers
+RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers && chmod -R 755 $IRIS_DIR/mopidy_iris/ && chmod -R 755 /root/ && chmod -R 755 /root/.cache/ && sed -i 's/_USE_SUDO = True/_USE_SUDO = False/g' $IRIS_DIR/mopidy_iris/system.py
+
 
 # Add crontab file in the cron directory
 COPY ./cronjob /etc/cron.d/cronjob
@@ -59,13 +54,9 @@ STOPSIGNAL SIGINT
 COPY ./templates /home/templates
 
 COPY ./templates/mopidy.conf /config/mopidy.conf
-COPY ./env_vars.sh /
-RUN chmod +x /env_vars.sh
-RUN bash /env_vars.sh >> /etc/environment
 
 COPY ./scan_library.sh /
 RUN chmod +x /scan_library.sh
-
 
 # Allows any user to run mopidy, but runs by default as a randomly generated UID/GID.
 RUN set -ex \
@@ -76,5 +67,13 @@ RUN set -ex \
 RUN echo "MOPIDY IRIS NEEDS THIS" >> /IS_CONTAINER
 RUN apt-get install -y dbus && apt-get clean
 RUN export DBUS_SESSION_BUS_ADDRESS=unix:path=/host/run/dbus/system_bus_socket
+
+RUN mkdir /home/cache
+
+ENV XDG_CACHE_DIR="/home/cache"
+ENV XDG_CONFIG_DIR="/etc/mopidy"
+ENV XDG_DATA_DIR="/data"
+ENV XDG_RUNTIME_DIR="/home"
+ENV HOME="/home"
 
 ENTRYPOINT [ "/start.sh" ]

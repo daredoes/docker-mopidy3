@@ -23,10 +23,11 @@ def kill_process_on_port(port):
 
 app = typer.Typer()
 
-CONFIG_PATH = "/config/mopidy.conf"
-SERVER_CONFIG_PATH = "/config/servers.json"
+XDG_CONFIG_DIR = os.environ.get('XDG_CONFIG_DIR', '/etc')
+
+CONFIG_PATH = f"{XDG_CONFIG_DIR}/mopidy.conf"
+SERVER_CONFIG_PATH = f"{XDG_CONFIG_DIR}/servers.json"
 SUPERVISORD_PATH = "/etc/supervisord.conf"
-STREAMS_PATH = "/etc/streams.csv"
 
 TEMPLATE_MOPIDY_PATH = "/home/templates/mopidy.conf"
 TEMPLATE_SUPERVISORD_MOPIDY_PATH = "/home/templates/supervisord-mopidy.conf"
@@ -214,6 +215,7 @@ class SupervisordMopidyConfBuilder:
         if not instance_config.get("process_name"):
             instance_config["process_name"] = stream_id.replace(" ", "_")
         env_vars = instance_config.get("environment", "")
+        print(instance_config)
         split_vars = []
         if env_vars:
             split_vars.extend(env_vars.split(","))
