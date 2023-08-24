@@ -29,7 +29,7 @@ RUN mkdir -p /var/log/supervisor
 COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY ./templates/system.sh /home/system.sh
 
-RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers && chmod -R 755 $IRIS_DIR/mopidy_iris/ && chmod -R 755 /root/ && chmod -R 755 /root/.cache/ && sed -i 's/_USE_SUDO = True/_USE_SUDO = False/g' $IRIS_DIR/mopidy_iris/system.py
+RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers && chmod -R 755 $IRIS_DIR/mopidy_iris/ && chmod -R 755 /root/ && chmod -R 755 /root/.cache/
 
 
 # Add crontab file in the cron directory
@@ -54,6 +54,7 @@ STOPSIGNAL SIGINT
 COPY ./templates /home/templates
 
 COPY ./templates/mopidy.conf /etc/mopidy/mopidy.conf
+COPY ./templates/servers.json /etc/mopidy/servers.json
 
 COPY ./scan_library.sh /
 RUN chmod +x /scan_library.sh
@@ -64,8 +65,9 @@ RUN set -ex \
  && chown mopidy:audio -R /home /start.sh \
  && chmod go+rwx -R /home /start.sh
 
-RUN echo "MOPIDY IRIS NEEDS THIS" >> /IS_CONTAINER
+RUN echo "1" >> /IS_CONTAINER
 RUN apt-get install -y dbus && apt-get clean
+RUN export DBUS_SESSION_BUS_ADDRESS=unix:path=/host/run/dbus/system_bus_socket
 
 RUN mkdir /home/cache
 
@@ -74,13 +76,7 @@ ENV XDG_CONFIG_DIR="/etc/mopidy"
 ENV XDG_DATA_DIR="/data"
 ENV HOME="/home"
 ENV REQUIREMENTS_FILE="/etc/mopidy/requirements.txt"
-ENV IRIS_USE_SUDO=false
-
-ENV SNAPCAST_FIFO_DIR="/data"
-ENV MOPIDY_FIFO_DIR="/tmp"
-ENV TEMPLATES_DIR="/home/templates"
-
+ENV MODIFY_IRIS=true
 COPY ./requirements.txt /etc/mopidy/requirements.txt
-COPY ./templates/servers.json /etc/mopidy/servers.json
 
 ENTRYPOINT [ "/start.sh" ]

@@ -1,16 +1,26 @@
 DOCKER_IMAGE=mopidy3
 DOCKER_REPO=daredoes
-TAG_NAME=develop
+TAG_NAME=beta
+ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+
+fresh-run:
+	docker run -d \
+    -p 9001:9001 \
+    -p 6680:6680 \
+    -p 6600:6600 \
+    -v $(ROOT_DIR)/music:/media \
+    $(DOCKER_REPO)/$(DOCKER_IMAGE)
 
 run:
 	docker run -d \
-    -p 3000:9001 \
+    -p 9001:9001 \
     -p 6680:6680 \
-    --privileged \
-    -v /Users/dare/Git/docker-mopidy3/cache:/home/cache \
-    -v /Users/dare/Git/docker-mopidy3/config:/etc/mopidy \
-    -v /Users/dare/Git/docker-mopidy3/data:/data \
-    -v /Volumes/NetBackup/Media/audio/youtubeDL:/media \
+    -p 6600:6600 \
+    -v $(ROOT_DIR)/cache:/home/cache \
+    -v $(ROOT_DIR)/config:/etc/mopidy \
+    -v $(ROOT_DIR)/share:/home/.local/share/mopidy \
+    -v $(ROOT_DIR)/data:/data \
+    -v $(ROOT_DIR)/music:/media \
     $(DOCKER_REPO)/$(DOCKER_IMAGE)
 
 

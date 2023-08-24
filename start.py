@@ -23,92 +23,137 @@ def kill_process_on_port(port):
 
 app = typer.Typer()
 
-XDG_CONFIG_DIR = os.environ.get('XDG_CONFIG_DIR', '/etc')
+XDG_CONFIG_DIR = os.environ.get('XDG_CONFIG_DIR', '/etc/mopidy')
+TEMPLATES_DIR = os.environ.get('TEMPLATES_DIR', '/home/templates')
+MOPIDY_FIFO_DIR = os.environ.get('MOPIDY_FIFO_DIR', '/tmp')
+SNAPCAST_FIFO_DIR = os.environ.get('SNAPCAST_FIFO_DIR', '/data')
 
 CONFIG_PATH = f"{XDG_CONFIG_DIR}/mopidy.conf"
 SERVER_CONFIG_PATH = f"{XDG_CONFIG_DIR}/servers.json"
 SUPERVISORD_PATH = "/etc/supervisord.conf"
 
-TEMPLATE_MOPIDY_PATH = "/home/templates/mopidy.conf"
-TEMPLATE_SUPERVISORD_MOPIDY_PATH = "/home/templates/supervisord-mopidy.conf"
-TEMPLATE_SUPERVISORD_PATH = "/home/templates/supervisord.conf"
+TEMPLATE_MOPIDY_PATH = f"{TEMPLATES_DIR}/mopidy.conf"
+TEMPLATE_SUPERVISORD_MOPIDY_PATH = f"{TEMPLATES_DIR}/supervisord-mopidy.conf"
+TEMPLATE_SUPERVISORD_PATH = f"{TEMPLATES_DIR}/supervisord.conf"
 
 
-def string_to_hex(string):
+def string_to_hex(string: str):
+    """Converts a string into a hexadecimal digest so that the characters are safe"""
     return hashlib.sha1(str(string).encode("utf-8")).hexdigest()
 
 
-def write_file_contents(filepath, contents):
+def write_file_contents(filepath: str, contents: str):
+    """Opens a filepath and overwrites the contents"""
     with open(filepath, "w") as f:
         f.write(contents)
 
 
-def read_file_contents(filepath):
+def read_file_contents(filepath: str):
+    """Opens a filepath and reads the contents"""
     with open(filepath, "r") as f:
         return f.read()
 
 
-def write_supervisord_conf(contents):
+def write_supervisord_conf(contents: str):
+    """Writes content to the SUPERVISORD main configuration file"""
     write_file_contents(SUPERVISORD_PATH, contents)
 
+def get_stream_id(stream_id: str = ""):
+    return stream_id if stream_id else os.environ.get("STREAM_ID")
 
-def write_mopidy_config(modified_config, count=""):
-    path = f"/tmp/mopidy{count}.conf"
-    with open(path, "w") as f:
+def stream_id_to_hex(stream_id: str = ""):
+    hex = string_to_hex(get_stream_id(stream_id))
+    return hex
+
+def get_mopidy_config_path(stream_id: str = ""):
+    hex = stream_id_to_hex(get_stream_id(stream_id))
+    path = f"{XDG_CONFIG_DIR}/mopidy{hex}.conf"
+    return path
+
+
+def get_mopidy_fifo_path(stream_id: str = ""):
+    hex = stream_id_to_hex(get_stream_id(stream_id))
+    path = f"{MOPIDY_FIFO_DIR}/mopidy{hex}"
+    return path
+
+def get_snapcast_fifo_path(stream_id: str = ""):
+    hex = stream_id_to_hex(get_stream_id(stream_id))
+    path = f"{SNAPCAST_FIFO_DIR}/mopidy{hex}"
+    return path
+
+
+def write_mopidy_config(modified_config: configparser.ConfigParser):
+    """Writes a mopidy config to """
+    path = get_mopidy_config_path()
+    with open(path, 'w') as f:
         modified_config.write(f)
-    print(f"Mopidy config written to {path}")
+        print(f"Mopidy config written to {path}")
     return path
 
 
 def modify_mopidy_conf(
-    config, mpd=None, http=None, count="", name="", snapcast: dict = None
+    config, mpd=None, http=None, count=None, name="", snapcast: dict = None
 ):
-    snapfifo = f"/tmp/snapfifo{count}"
-    modified_config = configparser.ConfigParser()
+    modified_config = configparser.ConfigParser() # create empty config
+    # Read given, or pull from default
     if os.path.exists(config):
+        print(f"Modifying config from {config}")
         modified_config.read(config)
     else:
+        print(f"Modifying config from {TEMPLATE_MOPIDY_PATH}")
         with open(TEMPLATE_MOPIDY_PATH, "r") as f:
             modified_config.read_file(f)
     if mpd:
-        print(f"modified mpd with port {mpd}")
-        modified_config["mpd"]["port"] = mpd
+        try:
+            modified_config["mpd"]["port"] = mpd
+            print(f"modified mpd with port {mpd}")
+        except KeyError:
+            print(f"unable to modify mpd with port {mpd}")
     if http:
-        print(f"modified http with port {http}")
-        modified_config["http"]["port"] = http
-    if modified_config["iris"]:
-        if name:
-            print(f"modified iris with stream {name}")
-            modified_config["iris"]["snapcast_stream"] = name
-        if snapcast:
-            if snapcast.get("enabled", False):
-                snapcast_enabled = "true" if snapcast.get("enable_in_iris", True) else "false"
-                print(f"modified iris with snapcast_enabled is {snapcast_enabled}")
-                modified_config["iris"]["snapcast_enabled"] = snapcast_enabled
-            host = snapcast.get("host", None)
-            port = snapcast.get("port", None)
-            ssl = snapcast.get("use_ssl", None)
-            if host:
-                modified_config["iris"]["snapcast_host"] = host
-                print(f"modified iris with host {host}")
-            if port:
-                modified_config["iris"]["snapcast_port"] = f'{port}'
-                print(f"modified iris with port {port}")
-            if ssl:
-                modified_config["iris"]["snapcast_ssl"] = "true" if ssl else "false"
-                print(f"modified iris with ssl {ssl}")
+        try:
+            modified_config["http"]["port"] = http
+            print(f"modified http with port {http}")
+        except KeyError:
+            print(f"unable to modify http with port {http}")
+    # Turns out this is deprecated
+    # if modified_config["iris"]:
+    #     if name:
+    #         print(f"modified iris with stream {name}")
+    #         modified_config["iris"]["snapcast_stream"] = name
+    #     if snapcast:
+    #         if snapcast.get("enabled", False):
+    #             snapcast_enabled = "true" if snapcast.get("enable_in_iris", True) else "false"
+    #             print(f"modified iris with snapcast_enabled is {snapcast_enabled}")
+    #             modified_config["iris"]["snapcast_enabled"] = snapcast_enabled
+    #         host = snapcast.get("host", None)
+    #         port = snapcast.get("port", None)
+    #         ssl = snapcast.get("use_ssl", None)
+    #         if host:
+    #             modified_config["iris"]["snapcast_host"] = host
+    #             print(f"modified iris with host {host}")
+    #         if port:
+    #             modified_config["iris"]["snapcast_port"] = f'{port}'
+    #             print(f"modified iris with port {port}")
+    #         if ssl:
+    #             modified_config["iris"]["snapcast_ssl"] = "true" if ssl else "false"
+    #             print(f"modified iris with ssl {ssl}")
+    snapfifo = get_mopidy_fifo_path()
     if snapfifo:
-        print(f"modified snapfifo with folder {snapfifo}")
-        modified_config["audio"]["output"] = modified_config["audio"]["output"].replace(
-            "/tmp/snapfifo", snapfifo
-        )
+        try:
+            modified_config["audio"]["output"] = modified_config["audio"]["output"].replace(
+                "/tmp/snapfifo", snapfifo
+            )
+            print(f"modified snapfifo with folder {snapfifo}")
+        except KeyError:
+            print(f"unable to modify snapfifo with folder {snapfifo}")
     # Returns filepath of new config
-    return write_mopidy_config(modified_config, count)
+    return write_mopidy_config(modified_config)
 
 
 def remove_stream_from_snapcast(
-    id, host="localhost", port=1780, use_ssl=False, **kwargs
+    id=None, host="localhost", port=1780, use_ssl=False, **kwargs
 ):
+    id = get_stream_id(id)
     try:
         payload = {
             "id": 8,
@@ -136,17 +181,19 @@ def remove_stream_from_snapcast(
 
 
 def add_stream_to_snapcast(
-    name, pipe="/data/snapfifo", host="localhost", port=1780, use_ssl=False, **kwargs
+    name, pipe=None, host="localhost", port=1780, use_ssl=False, **kwargs
 ):
+    pipe = get_snapcast_fifo_path(name)
     remove_stream_from_snapcast(name, host=host, port=port, use_ssl=use_ssl)
     try:
         sample_format = os.environ.get("SNAPCAST_SAMPLEFORMAT", "44100:16:2")
+        params = os.environ.get("SNAPCAST_STREAM_PARAMS", "&send_to_muted=false&controlscript=meta_mopidy.py")
         payload = {
             "id": 8,
             "jsonrpc": "2.0",
             "method": "Stream.AddStream",
             "params": {
-                "streamUri": f"pipe://{pipe}?name={name}&sampleformat={sample_format}&send_to_muted=false&controlscript=meta_mopidy.py"
+                "streamUri": f"pipe://{pipe}?name={name}&sampleformat={sample_format}{params}"
             },
         }
         url = (
@@ -205,7 +252,7 @@ class SupervisordMopidyConfBuilder:
 
     def get_instance_config(self, stream_id: str, config_filepath: str):
         instance_config = {}
-        count = string_to_hex(stream_id)
+        hex = string_to_hex(get_stream_id(stream_id))
         try:
             for options in self.config.items("program"):
                 option, value = options
@@ -215,7 +262,6 @@ class SupervisordMopidyConfBuilder:
         if not instance_config.get("process_name"):
             instance_config["process_name"] = stream_id.replace(" ", "_")
         env_vars = instance_config.get("environment", "")
-        print(instance_config)
         split_vars = []
         if env_vars:
             split_vars.extend(env_vars.split(","))
@@ -225,7 +271,7 @@ class SupervisordMopidyConfBuilder:
             split_vars.append(f"CONFIG_FILEPATH={config_filepath}")
         instance_config["environment"] = ",".join(split_vars)
 
-        return {f"program:mopidy{count}": instance_config}
+        return {f"program:mopidy{hex}": instance_config}
 
 
 class SupervisordConfBuilder:
@@ -264,6 +310,7 @@ def get_server_config_data() -> dict:
 
 @app.command()
 def create_supervisord_conf():
+    """This runs first"""
     supervisord_config_builder = SupervisordConfBuilder()
     supervisord_mopidy_config_builder = SupervisordMopidyConfBuilder()
 
@@ -271,13 +318,14 @@ def create_supervisord_conf():
     print(f"Got data", data)
     servers = data.get("servers", {})
     if servers:
-        server_count = len(servers.keys())
+        server_names = servers.keys()
+        server_count = len(server_names)
         print(f"Writing {server_count} mopidy supervisord configs")
-        for index, server_name in enumerate(servers.keys(), start=1):
+        for index, server_name in enumerate(server_names, start=1):
             print(f"Writing mopidy supervisord config {index}/{server_count}")
-            server_name
+            mopidy_conf = get_mopidy_config_path(server_name)
             mopidy_configs = supervisord_mopidy_config_builder.get_instance_config(
-                server_name, f"/tmp/mopidy{string_to_hex(server_name)}.conf"
+                server_name, mopidy_conf
             )
             for program_name, program_options in mopidy_configs.items():
                 supervisord_config_builder.add_program(
@@ -286,9 +334,10 @@ def create_supervisord_conf():
                 )
     else:
         print("Writing main mopidy supervisord config")
-        server_name = os.environ.get("STREAM_NAME", "Home")
+        server_name = os.environ.get("STREAM_ID", "Home")
+        mopidy_conf = get_mopidy_config_path(server_name)
         mopidy_configs = supervisord_mopidy_config_builder.get_instance_config(
-            server_name, f"/tmp/mopidy.conf"
+            server_name, mopidy_conf
         )
         for program_name, program_options in mopidy_configs.items():
             supervisord_config_builder.add_program(
@@ -300,7 +349,7 @@ def create_supervisord_conf():
 
 @app.command()
 def cleanup(stream_id: str = ""):
-    name = os.environ.get("STREAM_ID", stream_id)
+    name = get_stream_id(stream_id)
     if name and os.path.exists(SERVER_CONFIG_PATH):
         with open(SERVER_CONFIG_PATH, "r") as f:
             data = json.load(f)
@@ -317,7 +366,6 @@ def create(stream_id: str = ""):
     if name:
         data = get_server_config_data()
         server_config = data.get("servers", {}).get(name, {})
-        print(data)
         snapcast = data.get("snapcast", {})
         if server_config:
             mpd = str(server_config.get("mpd"))
