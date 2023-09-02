@@ -12,7 +12,6 @@ shutdown () {
 
 trap shutdown HUP TERM INT
 
-cron &
 /usr/bin/supervisord -c /etc/supervisord.conf &
 SUPERVISOR_PID=$!
 

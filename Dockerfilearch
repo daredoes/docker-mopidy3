@@ -1,0 +1,66 @@
+# Use the Arch Linux base image
+FROM archlinux
+# RUN pacman -Syu --needed --noconfirm git
+
+# RUN mkdir -p /tmp/yay-build
+# RUN useradd -m -G wheel builder && passwd -d builder
+# RUN chown -R builder:builder /tmp/yay-build
+# RUN echo 'builder ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+# RUN su - builder -c "git clone https://aur.archlinux.org/yay.git /tmp/yay-build/yay"
+# RUN su - builder -c "cd /tmp/yay-build/yay && makepkg -si --noconfirm"
+# RUN rm -rf /tmp/yay-build
+
+
+
+# Update the package list and install necessary packages
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm mopidy gstreamer supervisor python-pip  && \
+    pacman -Scc --noconfirm
+
+# RUN yay -S mopidy-mpd mopidy-local mopidy-youtube mopidy-ytmusic mopidy-musicbox mopidy-iris
+
+
+# Configure and start Supervisor
+COPY supervisord.conf /etc/supervisord.conf
+COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./templates/system.sh /home/system.sh
+RUN python -m venv venv
+COPY ./requirements.txt /
+RUN python -m pip install -r /requirements.txt --break-system-packages
+RUN mkdir -p /var/log/supervisor
+
+COPY ./start.sh /
+RUN chmod +x /start.sh
+COPY ./start_mopidy.sh /
+RUN chmod +x /start_mopidy.sh
+
+COPY ./start.py /
+RUN chmod +x /start.py
+STOPSIGNAL SIGINT
+
+COPY ./templates /home/templates
+
+COPY ./templates/mopidy.conf /etc/mopidy/mopidy.conf
+
+COPY ./scan_library.sh /
+RUN chmod +x /scan_library.sh
+
+RUN echo "MOPIDY IRIS NEEDS THIS" >> /IS_CONTAINER
+
+EXPOSE 5555 6600 6680 9001
+
+ENV XDG_CACHE_DIR="/cache"
+ENV XDG_CONFIG_DIR="/etc/mopidy"
+ENV XDG_DATA_DIR="/data"
+ENV HOME="/home"
+ENV REQUIREMENTS_FILE="/etc/mopidy/requirements.txt"
+ENV IRIS_USE_SUDO=false
+
+ENV SNAPCAST_FIFO_DIR="/data"
+ENV MOPIDY_FIFO_DIR="/tmp"
+ENV TEMPLATES_DIR="/home/templates"
+
+COPY ./requirements.txt /etc/mopidy/requirements.txt
+COPY ./templates/servers.json /etc/mopidy/servers.json
+
+ENTRYPOINT [ "/start.sh" ]

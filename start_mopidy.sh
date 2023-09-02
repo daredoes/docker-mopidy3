@@ -5,7 +5,7 @@ echo "Has arguments $STREAM_ID and $CONFIG_FILEPATH"
 # Install requirements from user-provided pip file
 if test -f "$REQUIREMENTS_FILE"; then
     echo "$REQUIREMENTS_FILE exists, installing requirements."
-    python3 -m pip install -r $REQUIREMENTS_FILE
+    python -m pip install -r $REQUIREMENTS_FILE --break-system-packages
 fi
 
 # IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && sed -i 's/_USE_SUDO = True/_USE_SUDO = False/g' $IRIS_DIR/mopidy_iris/system.py
@@ -23,7 +23,7 @@ python3 /start.py create --stream-id "$STREAM_ID"
 
 export IRIS_CONFIG_LOCATION=$CONFIG_FILEPATH
 
-/usr/bin/mopidy --config $CONFIG_FILEPATH &
+mopidy --config $CONFIG_FILEPATH &
 MOPIDY_PID=$!
 
 wait "${MOPIDY_PID}"

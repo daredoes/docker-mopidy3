@@ -1,0 +1,8 @@
+Mopidy==3.4.1
+Mopidy-Iris==3.68.0
+Mopidy-Local==3.2.1
+Mopidy-MPD==3.3.0
+requests==2.22.0
+decorator==4.4.1
+typer==0.7.0
+websockets==11.0.2

@@ -6,7 +6,7 @@ EXPOSE 5555 6600 6680 9001
 RUN apt-get update
 # tzdata has an interactive prompt that doesn't play nicely with docker when its a dependency
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata
-RUN apt-get install -y cron lsof supervisor wget git gnupg python3 python3-pip pkg-config libffi-dev libssl-dev libxml2-dev libxslt1-dev zlib1g-dev libcairo2-dev libgirepository1.0-dev build-essential libasound2-dev
+RUN apt-get install -y cron lsof supervisor wget git gnupg python3 python3-pip pkg-config libffi-dev libssl-dev libxml2-dev libxslt1-dev zlib1g-dev libcairo2-dev libgirepository1.0-dev build-essential libasound2-dev && apt-get clean
 # Stuff for youtube videos
 RUN apt-get install -y libmpg123-dev libmp3lame-dev gstreamer1.0-tools gstreamer1.0-alsa
 # Needed for ubuntu-advantage-tools EULA
@@ -20,16 +20,12 @@ RUN apt-get -y upgrade
 RUN apt-get install -y --allow-unauthenticated mopidy mopidy-local mopidy-mpd
 RUN apt-get install -y --fix-missing ubuntu-restricted-extras
 
-COPY ./requirements.txt /
 RUN python3 -m pip install pycairo
-RUN python3 -m pip install -r /requirements.txt
 
 RUN mkdir -p /var/log/supervisor
 
 COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY ./templates/system.sh /home/system.sh
-
-RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers && chmod -R 755 $IRIS_DIR/mopidy_iris/ && chmod -R 755 /root/ && chmod -R 755 /root/.cache/ && sed -i 's/_USE_SUDO = True/_USE_SUDO = False/g' $IRIS_DIR/mopidy_iris/system.py
 
 
 # Add crontab file in the cron directory
@@ -68,6 +64,10 @@ RUN echo "MOPIDY IRIS NEEDS THIS" >> /IS_CONTAINER
 RUN apt-get install -y dbus && apt-get clean
 
 RUN mkdir /home/cache
+
+COPY ./requirements.txt /
+RUN python3 -m pip install -r /requirements.txt
+RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers && chmod -R 755 $IRIS_DIR/mopidy_iris/ && chmod -R 755 /root/ && chmod -R 755 /root/.cache/ && sed -i 's/_USE_SUDO = True/_USE_SUDO = False/g' $IRIS_DIR/mopidy_iris/system.py
 
 ENV XDG_CACHE_DIR="/cache"
 ENV XDG_CONFIG_DIR="/etc/mopidy"

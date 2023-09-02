@@ -1,6 +1,6 @@
 DOCKER_IMAGE=mopidy3
 DOCKER_REPO=daredoes
-TAG_NAME=beta
+TAG_NAME=arch
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 fresh-run:

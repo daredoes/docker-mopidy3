@@ -1,0 +1,72 @@
+FROM alpine:edge
+
+EXPOSE 5555 6600 6680 9001
+
+RUN apk update
+RUN apk add supervisor python3-dev mopidy py3-mopidy-youtube py3-pip build-base glib-dev gobject-introspection-dev cairo py3-cairo
+
+RUN python3 -m venv venv
+COPY ./requirements.txt /
+RUN /venv/bin/python3 -m pip install pycairo
+RUN /venv/bin/python3 -m pip install -r /requirements.txt
+
+RUN mkdir -p /var/log/supervisor
+
+COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./templates/system.sh /home/system.sh
+
+RUN export IRIS_DIR=$(/venv/bin/pip show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers && chmod -R 755 $IRIS_DIR/mopidy_iris/ && chmod -R 755 /root/ && chmod -R 755 /root/.cache/ && sed -i 's/_USE_SUDO = True/_USE_SUDO = False/g' $IRIS_DIR/mopidy_iris/system.py
+
+
+# Add crontab file in the cron directory
+COPY ./cronjob /etc/cron.d/cronjob
+
+# Give execution rights on the cron job
+RUN chmod 0644 /etc/cron.d/cronjob
+
+# Apply cron job
+RUN crontab /etc/cron.d/cronjob
+# An empty line is required at the end of this file for a valid cron file.
+
+COPY ./start.sh /
+RUN chmod +x /start.sh
+COPY ./start_mopidy.sh /
+RUN chmod +x /start_mopidy.sh
+
+COPY ./start.py /
+RUN chmod +x /start.py
+STOPSIGNAL SIGINT
+
+COPY ./templates /home/templates
+
+COPY ./templates/mopidy.conf /etc/mopidy/mopidy.conf
+
+COPY ./scan_library.sh /
+RUN chmod +x /scan_library.sh
+
+# Allows any user to run mopidy, but runs by default as a randomly generated UID/GID.
+RUN set -ex \
+ && usermod -G audio,sudo mopidy \
+ && chown mopidy:audio -R /home /start.sh \
+ && chmod go+rwx -R /home /start.sh
+
+RUN echo "MOPIDY IRIS NEEDS THIS" >> /IS_CONTAINER
+# RUN apt-get install -y dbus && apt-get clean
+
+RUN mkdir /home/cache
+
+ENV XDG_CACHE_DIR="/cache"
+ENV XDG_CONFIG_DIR="/etc/mopidy"
+ENV XDG_DATA_DIR="/data"
+ENV HOME="/home"
+ENV REQUIREMENTS_FILE="/etc/mopidy/requirements.txt"
+ENV IRIS_USE_SUDO=false
+
+ENV SNAPCAST_FIFO_DIR="/data"
+ENV MOPIDY_FIFO_DIR="/tmp"
+ENV TEMPLATES_DIR="/home/templates"
+
+COPY ./requirements.txt /etc/mopidy/requirements.txt
+COPY ./templates/servers.json /etc/mopidy/servers.json
+
+ENTRYPOINT [ "/start.sh" ]
