@@ -74,12 +74,8 @@ RUN mkdir /home/cache
 ENV XDG_CACHE_DIR="/cache"
 ENV XDG_CONFIG_DIR="/etc/mopidy"
 ENV XDG_DATA_DIR="/data"
-ENV HOME="/home"
 ENV REQUIREMENTS_FILE="/etc/mopidy/requirements.txt"
 ENV IRIS_USE_SUDO=false
-
-ENV SNAPCAST_FIFO_DIR="/data"
-ENV MOPIDY_FIFO_DIR="/tmp"
 ENV TEMPLATES_DIR="/home/templates"
 
 COPY ./requirements.txt /etc/mopidy/requirements.txt

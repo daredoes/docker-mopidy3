@@ -25,8 +25,6 @@ app = typer.Typer()
 
 XDG_CONFIG_DIR = os.environ.get('XDG_CONFIG_DIR', '/etc/mopidy')
 TEMPLATES_DIR = os.environ.get('TEMPLATES_DIR', '/home/templates')
-MOPIDY_FIFO_DIR = os.environ.get('MOPIDY_FIFO_DIR', '/tmp')
-SNAPCAST_FIFO_DIR = os.environ.get('SNAPCAST_FIFO_DIR', '/data')
 
 CONFIG_PATH = f"{XDG_CONFIG_DIR}/mopidy.conf"
 SERVER_CONFIG_PATH = f"{XDG_CONFIG_DIR}/servers.json"
@@ -68,17 +66,6 @@ def stream_id_to_hex(stream_id: str = ""):
 def get_mopidy_config_path(stream_id: str = ""):
     hex = stream_id_to_hex(get_stream_id(stream_id))
     path = f"{XDG_CONFIG_DIR}/mopidy{hex}.conf"
-    return path
-
-
-def get_mopidy_fifo_path(stream_id: str = ""):
-    hex = stream_id_to_hex(get_stream_id(stream_id))
-    path = f"{MOPIDY_FIFO_DIR}/mopidy{hex}"
-    return path
-
-def get_snapcast_fifo_path(stream_id: str = ""):
-    hex = stream_id_to_hex(get_stream_id(stream_id))
-    path = f"{SNAPCAST_FIFO_DIR}/mopidy{hex}"
     return path
 
 
@@ -180,7 +167,7 @@ def remove_stream_from_snapcast(
 
 
 def add_stream_to_snapcast(
-    name, tcp=4953, host="localhost", port=1780, use_ssl=False, localhost="0.0.0.0", **kwargs
+    name, tcp_port=4953, host="localhost", port=1780, use_ssl=False, tcp_ip="0.0.0.0", **kwargs
 ):
     remove_stream_from_snapcast(name, host=host, port=port, use_ssl=use_ssl)
     try:
@@ -191,7 +178,7 @@ def add_stream_to_snapcast(
             "jsonrpc": "2.0",
             "method": "Stream.AddStream",
             "params": {
-                "streamUri": f"tcp://{localhost}:{tcp}?name={name}&sampleformat={sample_format}&mode=client{params}"
+                "streamUri": f"tcp://{tcp_ip}:{tcp_port}?name={name}&sampleformat={sample_format}&mode=client{params}"
             },
         }
         url = (
@@ -381,13 +368,13 @@ def create(stream_id: str = "", port: int = 4953):
                     CONFIG_PATH,
                     mpd=mpd,
                     http=http,
-                    host=snapcast.get("localhost", "127.0.0.1"),
+                    host=snapcast.get("tcp_ip", "127.0.0.1"),
                     port=port
                 )
                 print(f"Wrote config to: {config_filepath}")
         if snapcast:
             print(f"Found snapcast settings")
-            add_stream_to_snapcast(name, tcp=port, **snapcast)
+            add_stream_to_snapcast(name, tcp_port=port, **snapcast)
     else:
         print(
             "Trying to create stream without name. Make sure STREAM_ID is set in the environment"
