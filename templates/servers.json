@@ -2,11 +2,13 @@
     "servers": {
         "Music Server": {
             "mpd": 6600,
-            "http": 6680
+            "http": 6680,
+            "tcp": 4953
         }
     },
     "snapcast": {
         "enabled": true,
+        "localhost": "localhost",
         "host": "localhost",
         "port": 1780,
         "use_ssl": false

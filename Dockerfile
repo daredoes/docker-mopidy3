@@ -38,6 +38,10 @@ RUN chmod 0644 /etc/cron.d/cronjob
 RUN crontab /etc/cron.d/cronjob
 # An empty line is required at the end of this file for a valid cron file.
 
+COPY ./requirements.txt /
+RUN python3 -m pip install -r /requirements.txt
+RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers && chmod -R 755 $IRIS_DIR/mopidy_iris/ && chmod -R 755 /root/ && chmod -R 755 /root/.cache/ && sed -i 's/_USE_SUDO = True/_USE_SUDO = False/g' $IRIS_DIR/mopidy_iris/system.py
+
 COPY ./start.sh /
 RUN chmod +x /start.sh
 COPY ./start_mopidy.sh /
@@ -65,9 +69,7 @@ RUN apt-get install -y dbus && apt-get clean
 
 RUN mkdir /home/cache
 
-COPY ./requirements.txt /
-RUN python3 -m pip install -r /requirements.txt
-RUN export IRIS_DIR=$(pip3 show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers && chmod -R 755 $IRIS_DIR/mopidy_iris/ && chmod -R 755 /root/ && chmod -R 755 /root/.cache/ && sed -i 's/_USE_SUDO = True/_USE_SUDO = False/g' $IRIS_DIR/mopidy_iris/system.py
+
 
 ENV XDG_CACHE_DIR="/cache"
 ENV XDG_CONFIG_DIR="/etc/mopidy"
