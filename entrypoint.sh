@@ -1,3 +1,3 @@
 #!/bin/bash
-watch -n$LOCAL_SCAN_INTERVAL mopidy local scan &
+watch -n $LOCAL_SCAN_INTERVAL mopidy local scan &
 mopidy

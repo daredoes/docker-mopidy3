@@ -77,6 +77,7 @@ ENV XDG_DATA_DIR="/data"
 ENV REQUIREMENTS_FILE="/etc/mopidy/requirements.txt"
 ENV IRIS_USE_SUDO=false
 ENV TEMPLATES_DIR="/home/templates"
+ENV LOCAL_SCAN_INTERVAL="300"
 
 COPY ./requirements.txt /etc/mopidy/requirements.txt
 COPY ./templates/servers.json /etc/mopidy/servers.json
