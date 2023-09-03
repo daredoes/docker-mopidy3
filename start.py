@@ -79,7 +79,7 @@ def write_mopidy_config(modified_config: configparser.ConfigParser):
 
 
 def modify_mopidy_conf(
-    config, mpd=None, http=None, host="127.0.0.1", port=4953
+    config, mpd=None, http=None, port=4953
 ):
     modified_config = configparser.ConfigParser() # create empty config
     # Read given, or pull from default
@@ -127,11 +127,11 @@ def modify_mopidy_conf(
     if port:
         try:
             modified_config["audio"]["output"] = modified_config["audio"]["output"].replace(
-                "port=4953", f"host={host} port={port}"
+                "port=4953", f"port={port}"
             )
-            print(f"modified snapfifo with host {host} and port {port}")
+            print(f"modified snapfifo with port {port}")
         except KeyError:
-            print(f"unable to modify snapfifo with host {host} and port {port}")
+            print(f"unable to modify snapfifo with port {port}")
     # Returns filepath of new config
     return write_mopidy_config(modified_config)
 
@@ -368,7 +368,6 @@ def create(stream_id: str = "", port: int = 4953):
                     CONFIG_PATH,
                     mpd=mpd,
                     http=http,
-                    host=snapcast.get("tcp_ip", "127.0.0.1"),
                     port=port
                 )
                 print(f"Wrote config to: {config_filepath}")

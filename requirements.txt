@@ -23,6 +23,18 @@ Mopidy==3.4.1
 Mopidy-Iris==3.68.0
 Mopidy-Local==3.2.1
 Mopidy-MPD==3.3.0
+Mopidy-RadioNet==0.2.2
+Mopidy-TuneIn==1.1.0
+git+https://github.com/natumbri/mopidy-youtube.git@develop#egg=Mopidy-YouTube
+Mopidy-YTMusic==0.3.8
+Mopidy-Podcast==3.0.1
+Mopidy-Pandora==1.1.1
+Mopidy-Jellyfin==1.0.4
+Mopidy-InternetArchive==3.0.1
+Mopidy-dLeyna==2.0.2
+Mopidy-Beets==4.0.1
+Mopidy-Bandcamp==1.1.5
+Mopidy-Party==1.2.1
 Mopidy-MusicBox-Webclient==3.1.0
 musicbrainzngs==0.7.1
 mutagen==1.43.0
@@ -52,5 +64,6 @@ uritools==3.0.0
 urllib3==1.25.7
 validictory==1.1.2
 youtube-dl==2021.12.17
-ytmusicapi==0.20.0
+ytmusicapi==0.25.2
+yt-dlp==2023.7.6
 websockets==11.0.2

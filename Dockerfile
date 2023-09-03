@@ -8,7 +8,7 @@ RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata
 RUN apt-get install -y cron lsof supervisor wget git gnupg python3 python3-pip pkg-config libffi-dev libssl-dev libxml2-dev libxslt1-dev zlib1g-dev libcairo2-dev libgirepository1.0-dev build-essential libasound2-dev && apt-get clean
 # Stuff for youtube videos
-RUN apt-get install -y libmpg123-dev libmp3lame-dev gstreamer1.0-tools gstreamer1.0-alsa
+RUN apt-get install -y libmpg123-dev libmp3lame-dev gstreamer1.0-tools gstreamer1.0-alsa gstreamer1.0-libav gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly
 # Needed for ubuntu-advantage-tools EULA
 RUN echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 

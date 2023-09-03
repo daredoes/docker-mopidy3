@@ -8,6 +8,7 @@ fresh-run:
     -p 9001:9001 \
     -p 6680:6680 \
     -p 6600:6600 \
+    -p 4953:4953 \
     -v $(ROOT_DIR)/music:/media \
     $(DOCKER_REPO)/$(DOCKER_IMAGE)
 
@@ -16,6 +17,7 @@ run:
     -p 9001:9001 \
     -p 6680:6680 \
     -p 6600:6600 \
+    -p 4954:4954 \
     -v $(ROOT_DIR)/cache:/home/cache \
     -v $(ROOT_DIR)/config:/etc/mopidy \
     -v $(ROOT_DIR)/share:/home/.local/share/mopidy \
