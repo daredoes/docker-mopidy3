@@ -1,6 +1,6 @@
 DOCKER_IMAGE=mopidy3
 DOCKER_REPO=daredoes
-TAG_NAME=beta
+TAG_NAME=stable
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 fresh-run:
@@ -9,6 +9,7 @@ fresh-run:
     -p 6680:6680 \
     -p 6600:6600 \
     -p 4953:4953 \
+    -p 731:731 \
     -v $(ROOT_DIR)/music:/media \
     $(DOCKER_REPO)/$(DOCKER_IMAGE)
 
@@ -18,6 +19,8 @@ run:
     -p 6680:6680 \
     -p 6600:6600 \
     -p 4954:4954 \
+    -p 731:731 \
+    -v $(ROOT_DIR)/web.py:/web.py \
     -v $(ROOT_DIR)/cache:/home/cache \
     -v $(ROOT_DIR)/config:/etc/mopidy \
     -v $(ROOT_DIR)/share:/home/.local/share/mopidy \

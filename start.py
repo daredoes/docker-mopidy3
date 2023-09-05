@@ -27,7 +27,7 @@ XDG_CONFIG_DIR = os.environ.get('XDG_CONFIG_DIR', '/etc/mopidy')
 TEMPLATES_DIR = os.environ.get('TEMPLATES_DIR', '/home/templates')
 
 CONFIG_PATH = f"{XDG_CONFIG_DIR}/mopidy.conf"
-SERVER_CONFIG_PATH = f"{XDG_CONFIG_DIR}/servers.json"
+SERVER_CONFIG_PATH = f"{XDG_CONFIG_DIR}/settings.json"
 SUPERVISORD_PATH = "/etc/supervisord.conf"
 
 TEMPLATE_MOPIDY_PATH = f"{TEMPLATES_DIR}/mopidy.conf"
@@ -356,7 +356,7 @@ def create(stream_id: str = "", port: int = 4953):
     if name:
         data = get_server_config_data()
         server_config = data.get("servers", {}).get(name, {})
-        snapcast = data.get("snapcast", {})
+        snapcast = server_config.get("snapcast", {})
         if server_config:
             mpd = str(server_config.get("mpd"))
             http = str(server_config.get("http"))
