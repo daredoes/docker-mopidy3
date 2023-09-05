@@ -101,9 +101,9 @@ def make_form(name, *args: list, form_class='flex flex-col justify-start align-c
         </form>
     """
 
-def make_input(name, value=None, placeholder=None, input_type="text", children="", show_label=False, label=None, props=""):
+def make_input(name, value=None, placeholder=None, input_type="text", children="", show_label=False, label=None, props="", checked=False):
     final_html = ""
-    input_html = f"<input class='border border-solid' type='{input_type}' placeholder='{placeholder}' name='{name}' value='{value}' {props}>{children}</input>"
+    input_html = f"<input {'checked' if checked else ''} class='border border-solid' type='{input_type}' placeholder='{placeholder}' name='{name}' value='{value}' {props}>{children}</input>"
     if show_label:
         final_html = f"<div class='flex flex-row justify-start align-center gap-2'><label class='capitalize' for='{name}'>{label if label else name}</label>{input_html}</div>"
     else:
@@ -220,12 +220,13 @@ async def homepage(request: web.Request):
 @routes.get("/{id}")
 @load_server
 async def server_settings(request, server_name, server: MopidyServer):
+    is_checked = 'checked="true"'
     snapcast_inputs = [
-        make_input("snapcastEnabled", "checked" if server.snapcast.enabled else "", input_type='checkbox', label="Enabled", show_label=True),
+        make_input("snapcastEnabled", "true", input_type='checkbox', label="Enabled", show_label=True, checked=server.snapcast.enabled),
         make_input("snapcastServerIp", server.snapcast.server_ip, label="Server IP Address", show_label=True),
         make_input("snapcastClientIp", server.snapcast.client_ip, label="Client IP Address (usually 0.0.0.0)", show_label=True),
         make_input("snapcastPort", server.snapcast.port, input_type='number', props="max='25565' min='0'", label="Server Port", show_label=True),
-        make_input("snapcastSSL", "checked" if server.snapcast.ssl else "", input_type='checkbox', label="Use SSL?", show_label=True),
+        make_input("snapcastSSL", "true", input_type='checkbox', label="Use SSL?", show_label=True, checked=server.snapcast.ssl),
     ]
     inputs = [
         make_input("name", server_name, "Server Name", show_label=True),
@@ -248,16 +249,16 @@ async def save_server_settings(request: web.Request, server_name: str, *args, **
         oldSettings = cast(Settings, request.app["settings"])
         oldServer = oldSettings.servers.get(server_id, None)
         if oldServer:
-            print("Found server data")
+            print("Found server data", data)
             newName = data.get('name', None)
             newMpd = data.get('mpd', None)
             newHttp = data.get('http', None)
             newTcp = data.get('tcp', None)
-            snapcastEnabled = data.get('snapcastEnabled', None)
+            snapcastEnabled = True if data.get('snapcastEnabled', None) == "true" else False
             snapcastServerIp = data.get('snapcastServerIp', None)
             snapcastClientIp = data.get('snapcastClientIp', None)
             snapcastPort = data.get('snapcastPort', None)
-            snapcastSSL = data.get('snapcastSSL', None)
+            snapcastSSL = True if data.get('snapcastSSL', None) == "true" else False
             oldServer.mpd = newMpd
             oldServer.http = newHttp
             oldServer.tcp = newTcp

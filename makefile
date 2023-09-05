@@ -1,6 +1,6 @@
 DOCKER_IMAGE=mopidy3
 DOCKER_REPO=daredoes
-TAG_NAME=stable
+TAG_NAME=beta
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 fresh-run:
@@ -36,5 +36,9 @@ build:
 push:
 	docker tag $(DOCKER_REPO)/$(DOCKER_IMAGE) $(DOCKER_REPO)/$(DOCKER_IMAGE):$(TAG_NAME)
 	docker push $(DOCKER_REPO)/$(DOCKER_IMAGE):$(TAG_NAME)
+
+push-prod:
+	docker tag $(DOCKER_REPO)/$(DOCKER_IMAGE) $(DOCKER_REPO)/$(DOCKER_IMAGE):stable
+	docker push $(DOCKER_REPO)/$(DOCKER_IMAGE):stable
 
 .PHONY: build push 

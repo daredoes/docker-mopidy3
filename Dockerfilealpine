@@ -12,7 +12,7 @@ RUN /venv/bin/python3 -m pip install -r /requirements.txt
 
 RUN mkdir -p /var/log/supervisor
 
-COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./templates/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY ./templates/system.sh /home/system.sh
 
 RUN export IRIS_DIR=$(/venv/bin/pip show mopidy_iris | grep Location: | sed 's/^.\{10\}//') && echo "mopidy ALL=(ALL) NOPASSWD: $IRIS_DIR/mopidy_iris/system.sh" >> /etc/sudoers && chmod -R 755 $IRIS_DIR/mopidy_iris/ && chmod -R 755 /root/ && chmod -R 755 /root/.cache/ && sed -i 's/_USE_SUDO = True/_USE_SUDO = False/g' $IRIS_DIR/mopidy_iris/system.py

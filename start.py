@@ -137,7 +137,7 @@ def modify_mopidy_conf(
 
 
 def remove_stream_from_snapcast(
-    id=None, host="localhost", port=1780, use_ssl=False, **kwargs
+    id=None, server_ip="localhost", port=1780, ssl=False, **kwargs
 ):
     id = get_stream_id(id)
     try:
@@ -148,7 +148,7 @@ def remove_stream_from_snapcast(
             "params": {"id": id},
         }
         url = (
-            f'http{"s" if use_ssl else ""}://{host}{f":{port}" if port else ""}/jsonrpc'
+            f'http{"s" if ssl else ""}://{server_ip}{f":{port}" if port else ""}/jsonrpc'
         )
         response = requests.post(
             url=url,
@@ -167,9 +167,9 @@ def remove_stream_from_snapcast(
 
 
 def add_stream_to_snapcast(
-    name, tcp_port=4953, host="localhost", port=1780, use_ssl=False, tcp_ip="0.0.0.0", **kwargs
+    name, tcp_port=4953, server_ip="localhost", port=1780, ssl=False, client_ip="0.0.0.0", **kwargs
 ):
-    remove_stream_from_snapcast(name, host=host, port=port, use_ssl=use_ssl)
+    remove_stream_from_snapcast(name, server_ip=server_ip, port=port, ssl=ssl)
     try:
         sample_format = os.environ.get("SNAPCAST_SAMPLEFORMAT", "44100:16:2")
         params = os.environ.get("SNAPCAST_STREAM_PARAMS", "&send_to_muted=false&controlscript=meta_mopidy.py")
@@ -178,11 +178,11 @@ def add_stream_to_snapcast(
             "jsonrpc": "2.0",
             "method": "Stream.AddStream",
             "params": {
-                "streamUri": f"tcp://{tcp_ip}:{tcp_port}?name={name}&sampleformat={sample_format}&mode=client{params}"
+                "streamUri": f"tcp://{client_ip}:{tcp_port}?name={name}&sampleformat={sample_format}&mode=client{params}"
             },
         }
         url = (
-            f'http{"s" if use_ssl else ""}://{host}{f":{port}" if port else ""}/jsonrpc'
+            f'http{"s" if ssl else ""}://{server_ip}{f":{port}" if port else ""}/jsonrpc'
         )
         response = requests.post(
             url=url,

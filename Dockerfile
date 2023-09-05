@@ -24,7 +24,7 @@ RUN python3 -m pip install pycairo
 
 RUN mkdir -p /var/log/supervisor
 
-COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./templates/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY ./templates/system.sh /home/system.sh
 
 # An empty line is required at the end of this file for a valid cron file.
